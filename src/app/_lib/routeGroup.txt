@@ -2,3 +2,11 @@
 auth folder can have register, login route in it
 but as (auth) route will be /register and /logic
 route will not be /auth/register or /auth/logic
+
+As route groups we can group layout also my just having layout.tsx file in route group
+folder
+(auth)
+    /login
+    /register
+    layout.tsx
+    
