@@ -1,0 +1,4 @@
+(auth) can be consider as route group
+auth folder can have register, login route in it
+but as (auth) route will be /register and /logic
+route will not be /auth/register or /auth/logic
