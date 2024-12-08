@@ -1,6 +1,8 @@
 
-export default function CategoryId() {
+export default  function CategoryId(
+  {params}:{params: {catId:string}}
+) {
   return (
-    <div>cat Id</div>
+    <div>cat Id {params.catId}</div>
   )
 }
