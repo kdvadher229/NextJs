@@ -2,64 +2,122 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { useTasks } from "@/app/_lib/hooks/useTasks";
+import { useCategories } from "@/app/_lib/hooks/useCategories";
+import toast from "react-hot-toast";
+
+interface Category {
+  id: number;
+  name: string;
+  color: string;
+}
 
 interface Task {
   id: number;
   title: string;
-  description: string;
-  category: string;
+  description: string | null;
   completed: boolean;
+  category: Category;
+  categoryId: number;
+}
+
+interface CreateTaskInput {
+  title: string;
+  description: string;
+  categoryId: number;
 }
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: 1,
-      title: "Complete project proposal",
-      description: "Write and submit the project proposal for the new client",
-      category: "Work",
-      completed: false,
-    },
-    {
-      id: 2,
-      title: "Buy groceries",
-      description: "Get milk, eggs, and bread from the store",
-      category: "Personal",
-      completed: true,
-    },
-  ]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const {
+    tasks,
+    isLoading,
+    error,
+    createTask,
+    deleteTask,
+    toggleTaskComplete,
+  } = useTasks();
+  const { categories } = useCategories();
 
-  const [newTask, setNewTask] = useState({
-    title: "",
-    description: "",
-    category: "Personal",
-  });
-
-  const addTask = (e: React.FormEvent) => {
+  const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.title.trim()) return;
-
-    const task: Task = {
-      id: Date.now(),
-      ...newTask,
-      completed: false,
-    };
-
-    setTasks([...tasks, task]);
-    setNewTask({ title: "", description: "", category: "Personal" });
+    if (!categoryId) {
+      toast.error("Please select a category");
+      return;
+    }
+    try {
+      const taskInput: CreateTaskInput = {
+        title,
+        description,
+        categoryId: parseInt(categoryId),
+      };
+      await createTask(taskInput);
+      setTitle("");
+      setDescription("");
+      setCategoryId("");
+      toast.success("Task created successfully!", {
+        duration: 3000,
+        position: "top-right",
+      });
+    } catch (err) {
+      console.error("Error creating task:", err);
+      toast.error("Failed to create task", {
+        duration: 3000,
+        position: "top-right",
+      });
+    }
   };
 
-  const toggleTask = (id: number) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
+  const handleToggleComplete = async (task: Task) => {
+    try {
+      await toggleTaskComplete(task);
+      toast.success("Task status updated!", {
+        duration: 3000,
+        position: "top-right",
+      });
+    } catch (err) {
+      console.error("Error updating task:", err);
+      toast.error("Failed to update task status", {
+        duration: 3000,
+        position: "top-right",
+      });
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    try {
+      await deleteTask(taskId);
+      toast.success("Task deleted successfully!", {
+        duration: 3000,
+        position: "top-right",
+      });
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      toast.error("Failed to delete task", {
+        duration: 3000,
+        position: "top-right",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
     );
-  };
+  }
 
-  const deleteTask = (id: number) => {
-    setTasks(tasks.filter((task) => task.id !== id));
-  };
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -75,50 +133,76 @@ export default function TasksPage() {
 
       {/* Add Task Form */}
       <form
-        onSubmit={addTask}
+        onSubmit={handleCreateTask}
         className="bg-white p-6 rounded-xl shadow-sm space-y-4"
       >
         <h2 className="text-xl font-semibold mb-4">Add New Task</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <input
-            type="text"
-            placeholder="Task title"
-            value={newTask.title}
-            onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-            className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <select
-            value={newTask.category}
-            onChange={(e) =>
-              setNewTask({ ...newTask, category: e.target.value })
-            }
-            className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        <div className="space-y-4">
+          <div>
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Title
+            </label>
+            <input
+              type="text"
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              required
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              rows={3}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="category"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Category
+            </label>
+            <select
+              id="category"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Select a category</option>
+              {categories.map((category: Category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            <option value="Personal">Personal</option>
-            <option value="Work">Work</option>
-            <option value="Shopping">Shopping</option>
-          </select>
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Add Task
+          </button>
         </div>
-        <textarea
-          placeholder="Task description"
-          value={newTask.description}
-          onChange={(e) =>
-            setNewTask({ ...newTask, description: e.target.value })
-          }
-          className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          rows={3}
-        />
-        <button
-          type="submit"
-          className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          Add Task
-        </button>
       </form>
 
       {/* Task List */}
       <div className="space-y-4">
-        {tasks.map((task) => (
+        {tasks.map((task: Task) => (
           <div
             key={task.id}
             className="bg-white p-6 rounded-xl shadow-sm flex items-start justify-between"
@@ -127,8 +211,8 @@ export default function TasksPage() {
               <input
                 type="checkbox"
                 checked={task.completed}
-                onChange={() => toggleTask(task.id)}
-                className="mt-1 h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
+                onChange={() => handleToggleComplete(task)}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
               <div>
                 <h3
@@ -140,30 +224,30 @@ export default function TasksPage() {
                 >
                   {task.title}
                 </h3>
-                <p className="text-gray-600 mt-1">{task.description}</p>
-                <span className="inline-block mt-2 px-3 py-1 text-sm bg-indigo-100 text-indigo-800 rounded-full">
-                  {task.category}
-                </span>
+                <p
+                  className={`mt-2 text-sm ${
+                    task.completed ? "text-gray-500" : "text-gray-600"
+                  }`}
+                >
+                  {task.description}
+                </p>
+                {task.category && (
+                  <span
+                    className={`inline-block mt-2 px-3 py-1 text-sm ${task.category.color} rounded-full`}
+                  >
+                    {task.category.name}
+                  </span>
+                )}
               </div>
             </div>
-            <button
-              onClick={() => deleteTask(task.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="ml-4 flex-shrink-0">
+              <button
+                onClick={() => handleDeleteTask(task.id)}
+                className="text-gray-400 hover:text-red-500"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         ))}
       </div>

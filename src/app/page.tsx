@@ -14,7 +14,7 @@ export default function Home() {
         </p>
         <div className="flex justify-center gap-4">
           <Link
-            href="/tasks"
+            href="/dashboard"
             className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Get Started

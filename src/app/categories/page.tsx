@@ -1,138 +1,266 @@
 "use client";
 
 import { useState } from "react";
-
-interface Category {
-  id: number;
-  name: string;
-  color: string;
-  taskCount: number;
-}
+import Link from "next/link";
+import { PlusIcon, TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { useCategories } from "@/app/_lib/hooks/useCategories";
+import toast from "react-hot-toast";
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([
-    {
-      id: 1,
-      name: "Personal",
-      color: "bg-blue-100 text-blue-800",
-      taskCount: 5,
-    },
-    { id: 2, name: "Work", color: "bg-green-100 text-green-800", taskCount: 3 },
-    {
-      id: 3,
-      name: "Shopping",
-      color: "bg-purple-100 text-purple-800",
-      taskCount: 2,
-    },
-  ]);
+  const {
+    categories,
+    isLoading,
+    error,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+  } = useCategories();
 
   const [newCategory, setNewCategory] = useState({
     name: "",
     color: "bg-blue-100 text-blue-800",
   });
 
+  const [editingCategory, setEditingCategory] = useState<{
+    id: number;
+    name: string;
+    color: string;
+  } | null>(null);
+
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createCategory(newCategory);
+      setNewCategory({ name: "", color: "bg-blue-100 text-blue-800" });
+      toast.success("Category created successfully!", {
+        duration: 3000,
+        position: "top-right",
+      });
+    } catch (err) {
+      console.error("Error creating category:", err);
+      toast.error("Failed to create category", {
+        duration: 3000,
+        position: "top-right",
+      });
+    }
+  };
+
+  const handleUpdateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+
+    try {
+      await updateCategory(editingCategory.id, {
+        name: editingCategory.name,
+        color: editingCategory.color,
+      });
+      setEditingCategory(null);
+      toast.success("Category updated successfully!", {
+        duration: 3000,
+        position: "top-right",
+      });
+    } catch (err) {
+      console.error("Error updating category:", err);
+      toast.error("Failed to update category", {
+        duration: 3000,
+        position: "top-right",
+      });
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    try {
+      await deleteCategory(id);
+      toast.success("Category deleted successfully!", {
+        duration: 3000,
+        position: "top-right",
+      });
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      toast.error("Failed to delete category", {
+        duration: 3000,
+        position: "top-right",
+      });
+    }
+  };
+
   const colorOptions = [
     { value: "bg-blue-100 text-blue-800", label: "Blue" },
     { value: "bg-green-100 text-green-800", label: "Green" },
-    { value: "bg-purple-100 text-purple-800", label: "Purple" },
     { value: "bg-red-100 text-red-800", label: "Red" },
     { value: "bg-yellow-100 text-yellow-800", label: "Yellow" },
+    { value: "bg-purple-100 text-purple-800", label: "Purple" },
+    { value: "bg-pink-100 text-pink-800", label: "Pink" },
   ];
 
-  const addCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategory.name.trim()) return;
-
-    const category: Category = {
-      id: Date.now(),
-      ...newCategory,
-      taskCount: 0,
-    };
-
-    setCategories([...categories, category]);
-    setNewCategory({ name: "", color: "bg-blue-100 text-blue-800" });
-  };
-
-  const deleteCategory = (id: number) => {
-    setCategories(categories.filter((category) => category.id !== id));
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-gray-900">Categories</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Categories</h1>
+        <Link href="/tasks" className="text-indigo-600 hover:text-indigo-700">
+          Back to Tasks
+        </Link>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
 
       {/* Add Category Form */}
       <form
-        onSubmit={addCategory}
+        onSubmit={handleCreateCategory}
         className="bg-white p-6 rounded-xl shadow-sm space-y-4"
       >
         <h2 className="text-xl font-semibold mb-4">Add New Category</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <input
-            type="text"
-            placeholder="Category name"
-            value={newCategory.name}
-            onChange={(e) =>
-              setNewCategory({ ...newCategory, name: e.target.value })
-            }
-            className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <select
-            value={newCategory.color}
-            onChange={(e) =>
-              setNewCategory({ ...newCategory, color: e.target.value })
-            }
-            className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        <div className="space-y-4">
+          <div>
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Name
+            </label>
+            <input
+              type="text"
+              id="name"
+              value={newCategory.name}
+              onChange={(e) =>
+                setNewCategory({ ...newCategory, name: e.target.value })
+              }
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              required
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="color"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Color
+            </label>
+            <select
+              id="color"
+              value={newCategory.color}
+              onChange={(e) =>
+                setNewCategory({ ...newCategory, color: e.target.value })
+              }
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              {colorOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            {colorOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Add Category
+          </button>
         </div>
-        <button
-          type="submit"
-          className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          Add Category
-        </button>
       </form>
 
       {/* Categories List */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-4">
         {categories.map((category) => (
           <div
             key={category.id}
             className="bg-white p-6 rounded-xl shadow-sm flex items-center justify-between"
           >
-            <div className="flex items-center space-x-4">
-              <span className={`px-3 py-1 rounded-full ${category.color}`}>
-                {category.name}
-              </span>
-              <span className="text-gray-600">
-                {category.taskCount}{" "}
-                {category.taskCount === 1 ? "task" : "tasks"}
-              </span>
-            </div>
-            <button
-              onClick={() => deleteCategory(category.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {editingCategory?.id === category.id ? (
+              <form
+                onSubmit={handleUpdateCategory}
+                className="flex-1 flex items-center space-x-4"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                <input
+                  type="text"
+                  value={editingCategory.name}
+                  onChange={(e) =>
+                    setEditingCategory({
+                      ...editingCategory,
+                      name: e.target.value,
+                    })
+                  }
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  required
                 />
-              </svg>
-            </button>
+                <select
+                  value={editingCategory.color}
+                  onChange={(e) =>
+                    setEditingCategory({
+                      ...editingCategory,
+                      color: e.target.value,
+                    })
+                  }
+                  className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  {colorOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingCategory(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <>
+                <div className="flex items-center space-x-4">
+                  <span
+                    className={`inline-block px-3 py-1 text-sm ${category.color} rounded-full`}
+                  >
+                    {category.name}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {category.taskCount} tasks
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() =>
+                      setEditingCategory({
+                        id: category.id,
+                        name: category.name,
+                        color: category.color,
+                      })
+                    }
+                    className="text-gray-400 hover:text-indigo-500"
+                  >
+                    <PencilIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCategory(category.id)}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>
